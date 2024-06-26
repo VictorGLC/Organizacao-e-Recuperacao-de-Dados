@@ -88,7 +88,7 @@ Use os arquivos (`lista0.txt`, `lista1.txt`, ..., `lista99.txt`) para testar a s
 Faça com que o valor de k (i.e., o número de listas a serem intercaladas) seja passado como um argumento pela linha de comando.
 - Exemplo:
 ```sh
-$ python3 kwaymerge.py 100
+$ python3 kwaymerge.py listas 100
 ```
 
 ## Estrutura geral do programa
