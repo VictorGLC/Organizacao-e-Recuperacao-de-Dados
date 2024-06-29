@@ -1,9 +1,3 @@
-# Organizacao-e-Recuperacao-de-Dados
-
-Claro! Aqui está uma descrição para o seu projeto no GitHub:
-
----
-
 # Organização e Recuperação de Dados
 
 Este repositório contém os arquivos e implementações utilizadas nas aulas de Organização e Recuperação de Dados. Os principais tópicos abordados incluem:
