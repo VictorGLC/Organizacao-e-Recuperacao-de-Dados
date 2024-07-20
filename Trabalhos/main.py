@@ -9,25 +9,25 @@ CARACTER_REMOCAO = '*' # caracter lógico de remoção do registro
 NUM_BYTES_MIN = 15 # tamanho minimo de bytes para inserção na led
 
 # percorre todos os elementos adicionados na led
-def percorre_led(arq: io.TextIOWrapper) -> bool:
+def percorre_led(arq: io.TextIOWrapper) -> list[tuple[int, int]]:
     ponteiros = []
-    pont = le_cab(arq)
-    while pont != -1:
+    offset = le_cab(arq)
+    while offset != -1:
         arq.seek(os.SEEK_SET)
-        arq.seek(pont)
+        arq.seek(offset)
 
         tam = int.from_bytes(arq.read(SIZEOF_TAM_REG))
-        arq.seek(os.SEEK_CUR, 1)
+        arq.seek(1, os.SEEK_CUR)
 
-        elem = (pont, tam)
+        elem = (offset, tam)
         ponteiros.append(elem)
 
-        pont = int.from_bytes(arq.read(SIZEOF_LED_PTR), signed=True)
+        offset = int.from_bytes(arq.read(SIZEOF_LED_PTR), signed=True)
 
     return ponteiros
 
 # imprime os elementos da led
-def imprime_led(arq: io.TextIOWrapper):
+def imprime_led(arq: io.TextIOWrapper) -> None:
     ponteiros = percorre_led(arq)
 
     str = "LED -> "
@@ -37,15 +37,27 @@ def imprime_led(arq: io.TextIOWrapper):
     print(str)
     print(f"Total: {len(ponteiros)} espaços disponiveis")
 
-# insere novo registro de jogo no fim do arquivo
-def insere_jogo(arq: io.TextIOWrapper, conteudo: str) -> None:
+# faz uma inserção no final do arquivo
+def inserir_fim(arq: io.TextIOWrapper, conteudo: str) -> None:
     arq.seek(os.SEEK_SET, os.SEEK_END)
-    chave = conteudo.split("|")[0]
     buffer = conteudo.encode()
 
     tam = len(buffer).to_bytes(SIZEOF_TAM_REG)
     arq.write(tam)
     arq.write(buffer)
+
+# faz uma inserção no offset da cabeça da led
+def inserir_led(arq: io.TextIOWrapper, conteudo: str) -> None:
+    raise NotImplemented
+
+# insere novo registro de jogo no fim do arquivo
+def insere_jogo(arq: io.TextIOWrapper, conteudo: str) -> None:
+    led = percorre_led(arq)
+    chave = conteudo.split("|")[0]
+    """ if len(led) != 0 and led[0][1] > len(conteudo) and led[0][1] > NUM_BYTES_MIN:
+        inserir_led(arq, conteudo)
+    else: """
+    inserir_fim(arq, conteudo) 
 
     print(f"Inserção do registro de chave \"{chave}\" ({len(conteudo)} bytes)\nLocal: fim do arquivo.\n")
 
@@ -61,28 +73,67 @@ def leia_reg(arq: io.TextIOWrapper) -> tuple[str, int]:
     return '', None
 
 # retorna o valor da cabeça da led armazenada no cabeçalho.
-def le_cab(arq: io.TextIOWrapper):
+def le_cab(arq: io.TextIOWrapper) -> int:
     arq.seek(os.SEEK_SET)
     cab = int.from_bytes(arq.read(SIZEOF_CAB), signed=True)
     arq.seek(os.SEEK_SET)
 
     return cab
 
+# retorna o primeiro indice do offset cujo é maior que o tamanho do registro excluido.
+def indice_led(arq: io.TextIOWrapper, tam_reg_removido: int) -> list[tuple[int, int]]:
+    ponteiros = percorre_led(arq)
+    for i in range(len(ponteiros)):
+        if tam_reg_removido > ponteiros[i][1]:
+            if i == 0:
+                return i, ponteiros
+            return i-1, ponteiros
+    return -1, ponteiros
+
+# adiciona e ordena o offset na led no formato worst-fit.
+def ordena_led(arq: io.TextIOWrapper, offset: int) -> None:
+    arq.seek(offset)
+    tam_reg_removido = int.from_bytes(arq.read(SIZEOF_TAM_REG))
+    indice, ponteiros = indice_led(arq, tam_reg_removido)
+
+    if tam_reg_removido > ponteiros[0][1]: # se o registro deletado for o maior, adiciona na cabeça da led
+        cab = le_cab(arq)
+        arq.write(offset.to_bytes(SIZEOF_LED_PTR, signed=True))
+
+        arq.seek(offset, os.SEEK_SET)
+        arq.read(SIZEOF_TAM_REG)
+        arq.write(CARACTER_REMOCAO.encode())
+        arq.write(cab.to_bytes(4, signed=True))
+    else:
+        arq.seek(ponteiros[indice][0], os.SEEK_SET)
+        arq.seek(SIZEOF_TAM_REG+len(CARACTER_REMOCAO), os.SEEK_CUR)
+        offset_anterior = int.from_bytes(arq.read(SIZEOF_LED_PTR))
+
+        arq.seek(ponteiros[indice][0], os.SEEK_SET)
+        arq.seek(SIZEOF_TAM_REG+len(CARACTER_REMOCAO), os.SEEK_CUR)
+        arq.write(offset.to_bytes(SIZEOF_LED_PTR, signed=True))
+        
+        arq.seek(offset, os.SEEK_SET)
+        arq.seek(SIZEOF_TAM_REG, os.SEEK_CUR)
+        arq.write(CARACTER_REMOCAO.encode())
+        arq.write(offset_anterior.to_bytes(SIZEOF_LED_PTR))
+
 # procura a chave no arquivo, se existir, faz a remoção lógica do registro
 def remove_jogo(arq: io.TextIOWrapper, chave: str) -> None:
-    reg, tam, offset, achou = busca(arq, chave)
+    _, tam, offset, achou = busca(arq, chave)
     cab = le_cab(arq)
     print(f"Remoção do registro de chave \"{chave}\"")
 
     if achou:
-        arq.seek(offset)
-        tam_reg_remocao = int.from_bytes(arq.read(SIZEOF_TAM_REG))
-        arq.write(CARACTER_REMOCAO.encode())
+        if cab == -1: # se a led estiver vazia adiciona na cabeça da led
+            arq.write(offset.to_bytes(SIZEOF_LED_PTR, signed=True))
 
-        arq.write(cab.to_bytes(4, signed=True))
-        arq.seek(0)
-        arq.write(offset.to_bytes(4, signed=True))
-
+            arq.seek(offset, os.SEEK_SET)
+            arq.seek(SIZEOF_TAM_REG, os.SEEK_CUR)
+            arq.write(CARACTER_REMOCAO.encode())
+            arq.write(cab.to_bytes(4, signed=True))
+        else:
+            ordena_led(arq, offset)
         print(f"Registro removido! ({tam} bytes)\nLocal: offset = {offset} bytes (0x{offset:04x})\n")
     else:
         print("Erro: registro não encontrado\n")
@@ -162,6 +213,6 @@ def main(nargs: int, args: list[str]) -> None:
             raise Exception(f"Número incorreto de argumentos.\n{modo_uso}")
 
         arq.close()
-        
+
 if __name__ == '__main__':
     main(len(sys.argv), sys.argv)
