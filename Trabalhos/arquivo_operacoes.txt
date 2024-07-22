@@ -1,6 +1,8 @@
-b 22
-i 147|Resident Evil 2|1998|Survival horror|Capcom|PlayStation|
-r 99
-r 230
-i 181|Pac-Man|1980|Maze|Namco|Arcade|
-i 144|The Sims|2000|Life simulation|Electronic Arts|PC|
+r 85
+i 125|Grand Theft Auto V|2013|Action-adventure|Rockstar Games|PS4|
+b 99
+i 142|Portal 2|2011|Puzzle-platformer|Valve|PC|
+r 7
+b 14
+i 153|League of Legends|2009|MOBA|Riot Games|PC|
+b 8
