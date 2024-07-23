@@ -27,6 +27,17 @@ def leia_cabecalho(arq: io.TextIOWrapper) -> int:
 
     return cab
 
+# imprime os elementos da led
+def imprime_led(arq: io.TextIOWrapper) -> None:
+    ponteiros = percorre_led(arq)
+
+    str = "LED -> "
+    for elem in  ponteiros:
+        str += f"[offset: {elem[0]}, tam: {elem[1]}] -> "
+    str += "[offset: -1]"
+    print(str)
+    print(f"Total: {len(ponteiros)} espaços disponiveis")
+
 # percorre todos os elementos adicionados na led e retorna uma lista de tuplas com offset e tamanho do registro removido.
 def percorre_led(arq: io.TextIOWrapper) -> list[tuple[int, int]]:
     ponteiros = []
@@ -45,17 +56,6 @@ def percorre_led(arq: io.TextIOWrapper) -> list[tuple[int, int]]:
         arq.seek(os.SEEK_SET)
 
     return ponteiros
-
-# imprime os elementos da led
-def imprime_led(arq: io.TextIOWrapper) -> None:
-    ponteiros = percorre_led(arq)
-
-    str = "LED -> "
-    for elem in  ponteiros:
-        str += f"[offset: {elem[0]}, tam: {elem[1]}] -> "
-    str += "[offset: -1]"
-    print(str)
-    print(f"Total: {len(ponteiros)} espaços disponiveis")
 
 # retorna o primeiro indice do offset cujo tamanho seja maior que o tamanho do registro excluido.
 def indice_led(arq: io.TextIOWrapper, tam_reg_removido: int) -> list[tuple[int, int]]:
@@ -166,7 +166,7 @@ def remove(arq: io.TextIOWrapper, cabeca: int, offset: int):
         arq.seek(offset, os.SEEK_SET)
         arq.seek(SIZEOF_TAM_REG, os.SEEK_CUR)
         arq.write(CARACTER_REMOCAO.encode())
-        arq.write(cabeca.to_bytes(4, signed=True))
+        arq.write(cabeca.to_bytes(SIZEOF_LED_PTR, signed=True))
     else:
         ordena_led(arq, offset)
 
@@ -191,7 +191,6 @@ def busca_jogo(arq: io.TextIOWrapper, chave: str) -> None:
         print(f"{reg} ({tam} bytes)\nLocal: offset = {offset} bytes\n")
     else:
         print("Erro: registro não encontrado!\n")
-
 
 # busca o id no registro e retorna uma tupla com o reg, tamanho, offset e achou
 def busca(arq: io.TextIOWrapper, chave: str) -> tuple[str, int, int, bool]:
