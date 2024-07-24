@@ -7,6 +7,7 @@ SIZEOF_TAM_REG = 2 # tamanho em bytes que precede cada registro
 SIZEOF_LED_PTR = 4 # tamanho em bytes do ponteiro da led
 CARACTER_REMOCAO = '*' # caracter lógico de remoção do registro
 NUM_BYTES_MIN = 15 # tamanho minimo de bytes para inserção na led
+NUM_CAMPOS = 6
 
 # le um registro e retorna uma tupla com a string do registro e seu tamanho em bytes.
 def leia_reg(arq: io.TextIOWrapper) -> tuple[str, int]:
@@ -16,6 +17,7 @@ def leia_reg(arq: io.TextIOWrapper) -> tuple[str, int]:
         reg = arq.read(tam)
         if reg[0:1] == CARACTER_REMOCAO.encode():
             return '*', tam
+        
         return reg.decode(), tam
     return '', None
 
@@ -105,6 +107,17 @@ def remove_cabeca_led(arq: io.TextIOWrapper) -> None:
     arq.write(nova_cab.to_bytes(SIZEOF_LED_PTR))
     arq.seek(os.SEEK_SET)
 
+def trata_sobra(arq: io.TextIOWrapper, sobra: int, offset_sobra: int) -> None:
+    sobra = sobra - SIZEOF_TAM_REG
+    tam_sobra_byte = sobra.to_bytes(SIZEOF_TAM_REG)
+    
+    arq.write(tam_sobra_byte)
+    for _ in range(sobra):
+        arq.write(".".encode())
+    
+    remove(arq, leia_cabecalho(arq), offset_sobra)
+    
+
 # faz uma inserção no offset da cabeça da led
 def inserir_led(arq: io.TextIOWrapper, conteudo: str, offset_cabeca: int, tamanho_cabeca: int) -> int:
     remove_cabeca_led(arq)
@@ -113,19 +126,19 @@ def inserir_led(arq: io.TextIOWrapper, conteudo: str, offset_cabeca: int, tamanh
     buffer = conteudo.encode()
     tam_reg = len(buffer).to_bytes(SIZEOF_TAM_REG)
 
-    arq.write(tam_reg)
-    arq.write(buffer)
-
-    sobra = tamanho_cabeca - SIZEOF_TAM_REG - len(buffer)
+    sobra = tamanho_cabeca - len(buffer)
     offset_sobra = offset_cabeca + SIZEOF_TAM_REG + len(buffer)
-    tam_sobra = sobra.to_bytes(SIZEOF_TAM_REG)
-
-    arq.write(tam_sobra)
-    for _ in range(sobra):
-        arq.write(".".encode())
-    
-    if sobra >= NUM_BYTES_MIN:
-        remove(arq, leia_cabecalho(arq), offset_sobra)
+    if sobra > NUM_BYTES_MIN:
+        arq.write(tam_reg)
+        arq.write(buffer)
+        trata_sobra(arq, sobra, offset_sobra)
+        return sobra - SIZEOF_TAM_REG
+    else:
+        sobra_arq = len(buffer) + sobra
+        arq.write(sobra_arq.to_bytes(SIZEOF_TAM_REG))
+        arq.write(buffer)
+        for _ in range(sobra):
+            arq.write(".".encode())
 
     return sobra
     
@@ -200,9 +213,12 @@ def busca(arq: io.TextIOWrapper, chave: str) -> tuple[str, int, int, bool]:
     reg, tam = leia_reg(arq)
     while reg and not achou:
         chave_reg = reg.split('|')[0]
-
         if chave_reg == chave:
             achou = True
+            campos = reg.split("|")
+            if len(campos) > NUM_CAMPOS:
+                reg = "|".join(campos[:-1])
+                tam = tam - len(campos[-1])
         else:
             offset = offset + SIZEOF_TAM_REG + tam  # atualiza o offset
             reg, tam = leia_reg(arq)
