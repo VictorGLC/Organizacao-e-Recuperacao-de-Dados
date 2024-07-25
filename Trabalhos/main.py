@@ -19,10 +19,10 @@ def leia_reg(arq: io.TextIOWrapper) -> tuple[str, int]:
     if tam > 0:
         reg = arq.read(tam)
         if reg[0:1] == CARACTER_REMOCAO.encode():
-            return '*', tam
+            return CARACTER_REMOCAO, tam
         
         return reg.decode(), tam
-    return '', None
+    return '', 0
 
 # retorna o valor da cabeça da led armazenada no cabeçalho.
 def leia_cabecalho(arq: io.TextIOWrapper) -> int:
@@ -87,7 +87,7 @@ def ordena_led(arq: io.TextIOWrapper, offset: int) -> None:
         arq.seek(offset, os.SEEK_SET)
         arq.read(SIZEOF_TAM_REG)
         arq.write(CARACTER_REMOCAO.encode())
-        arq.write(cab.to_bytes(4, signed=True))
+        arq.write(cab.to_bytes(SIZEOF_LED_PTR, signed=True))
     else:
         arq.seek(antecessor_reg_removido, os.SEEK_SET)
         arq.seek(SIZEOF_TAM_REG+len(CARACTER_REMOCAO), os.SEEK_CUR)
@@ -115,7 +115,7 @@ def remove_cabeca_led(arq: io.TextIOWrapper) -> None:
 # faz o tratamento da sobra, se a sobra for do tamanho minimo de bytes permitido.
 def trata_sobra(arq: io.TextIOWrapper, sobra: int, offset_sobra: int) -> None:
     sobra = sobra - SIZEOF_TAM_REG
-    tam_sobra_byte = sobra.to_bytes(SIZEOF_TAM_REG)
+    tam_sobra_byte = sobra.to_bytes(SIZEOF_TAM_REG, signed=True)
     
     arq.write(tam_sobra_byte)
     for _ in range(sobra):
@@ -137,6 +137,7 @@ def inserir_led(arq: io.TextIOWrapper, conteudo: str, offset_cabeca: int, tamanh
         arq.write(tam_reg)
         arq.write(buffer)
         trata_sobra(arq, sobra, offset_sobra)
+        
         return sobra - SIZEOF_TAM_REG
     else:
         sobra_arq = len(buffer) + sobra
@@ -147,7 +148,6 @@ def inserir_led(arq: io.TextIOWrapper, conteudo: str, offset_cabeca: int, tamanh
 
         return sobra
 
-    
 # faz uma inserção no final do arquivo
 def inserir_fim(arq: io.TextIOWrapper, conteudo: str) -> None:
     arq.seek(os.SEEK_SET, os.SEEK_END)
@@ -178,7 +178,7 @@ def insere_jogo(arq: io.TextIOWrapper, conteudo: str) -> None:
         print(f"{insercao_registro}\nLocal: fim do arquivo.\n")
 
 # remove o registro e o adiciona na led
-def remove(arq: io.TextIOWrapper, cabeca: int, offset: int):
+def remove(arq: io.TextIOWrapper, cabeca: int, offset: int) -> None:
     if cabeca == -1: # se a led estiver vazia adiciona na cabeça da LED
         arq.write(offset.to_bytes(SIZEOF_LED_PTR, signed=True))
 
