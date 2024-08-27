@@ -125,9 +125,37 @@ def lePagina(rrn):
         
         # Escreve os filhos
         for filho in pag.filhos:
-            arq.write(struct.pack('i', filho))'''
+            arq.write(struct.pack('i', filho))
 
-# def divide(chave, filhoD, pag):
+def divide(chave, filhoD, pag):
+    # Insira chave e filhoD em pag usando a função insereNaPagina
+    insereNaPagina(chave, filhoD, pag)
+    # Calcule a posição do meio
+    meio = ORDEM // 2
+    # A chave promovida é a chave na posição do meio
+    chavePro = pag.chaves[meio]
+    # O RRN do filho direito promovido, que será o RRN da nova página
+    filhoDpro = novo_rrn()
+    
+    # A página atual (pAtual) contém os elementos até o meio
+    pAtual = Pagina()
+    pAtual.chaves = pag.chaves[:meio]
+    pAtual.filhos = pag.filhos[:meio + 1]
+    
+    # A nova página (pNova) contém os elementos a partir de meio+1
+    pNova = Pagina()
+    pNova.chaves = pag.chaves[meio + 1:]
+    pNova.filhos = pag.filhos[meio + 1:]
+    
+    # Preencha as listas de chaves e filhos restantes com -1
+    pAtual.chaves += [-1] * (ORDEM - 1 - len(pAtual.chaves))
+    pAtual.filhos += [-1] * (ORDEM - len(pAtual.filhos))
+    pNova.chaves += [-1] * (ORDEM - 1 - len(pNova.chaves))
+    pNova.filhos += [-1] * (ORDEM - len(pNova.filhos))
+
+    # Retorne a chave promovida, o RRN do filho direito, e as duas páginas
+    return chavePro, filhoDpro, pAtual, pNova'''
+
 
 def novo_rrn():
     with open("btree.dat", "r+b") as arq:
