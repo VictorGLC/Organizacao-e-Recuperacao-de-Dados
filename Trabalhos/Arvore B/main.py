@@ -86,7 +86,6 @@ def insereNaPagina(chave, filhoD, pag):
     # Insere a nova chave e filhoD na posição correta
     pag.chaves[i] = chave
     pag.filhos[i + 1] = filhoD
-    
     # Atualiza o número de chaves na página
     pag.numChaves += 1
 
@@ -112,7 +111,6 @@ def lePagina(rrn):
 
         return pag
 
-
 def escrevePagina(rrn, pag):
 
 def divide(chave, filhoD, pag):
@@ -125,34 +123,28 @@ def novo_rrn():
         
     return rrn
 
-    
 '''def gerenciadorDeInsercao(raiz):
     chave = lerChave()
-    
     while chave is not None:
         # Insere a chave na árvore e retorna a chave promovida, filho promovido e se houve promoção
         chavePro, filhoDpro, promoção = insereNaArvore(chave, raiz)
-        
         if promoção:
             # Inicialize pNova como uma nova página
             pNova = Pagina()
-            
             # Configure a nova página
             pNova.chaves[0] = chavePro     # nova chave raiz
             pNova.filhos[1] = filhoDpro    # filho direito promovido
             pNova.numChaves = 1            # incrementa o número de chaves
-            
             # Escreva a nova página no arquivo da árvore-B
-            rrn_pNova = escreverPagina(pNova)
-            
+            rrn_pNova = novo_rrn()
+            escrevePagina(rrn_pNova, pNova)
             # Atualize a raiz com o RRN da nova página
             raiz = rrn_pNova
-        
+            
         # Leia a próxima chave
         chave = lerChave()
     
     return raiz'''
-
 
 def main():
     try:
@@ -165,8 +157,7 @@ def main():
         with open("btree.dat", "w+b") as arqArvb:
             # Define a raiz como 0 e escreve no cabeçalho
             raiz = 0
-            arqArvb.write(struct.pack('I', raiz))  # Escreve o cabeçalho com TAM_CAB bytes
-                
+            arqArvb.write(struct.pack('I', raiz))  # Escreve o cabeçalho com TAM_CAB bytes            
             # Inicialize a página e escreva no arquivo
             pag = Pagina()
             pag_bytes = struct.pack('I', pag.numChaves)  # Número de chaves
@@ -175,8 +166,7 @@ def main():
             arqArvb.write(pag_bytes + chaves_bytes + filhos_bytes)
 
         # Gerencie a inserção
-        raiz = gerenciadorDeInsercao(raiz)
-        
+        raiz = gerenciadorDeInsercao(raiz)      
         # Abra o arquivo novamente para atualização
         with open("btree.dat", "r+b") as arqArvb:
             # Escreva a nova raiz no cabeçalho
