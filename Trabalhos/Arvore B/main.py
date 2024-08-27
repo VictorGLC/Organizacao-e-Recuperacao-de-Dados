@@ -153,16 +153,8 @@ def novo_rrn():
     
     return raiz'''
 
-# inicializa arquivo de operacoes
-def inicializa_arq_operacoes(arq: io.TextIOWrapper, caminho_operacoes: str) -> None:
-    try:
-        operacoes(arq, caminho_operacoes)
-    except FileNotFoundError:
-        print(f"Erro: O arquivo de operações {caminho_operacoes} não foi encontrado.")
-    except Exception as e:
-        print(f"Ocorreu um erro ao abrir o arquivo: {e}")
 
-def main    ():
+def main():
     try:
         with open('btree.dat', "r+b") as arqArvb:
             # Leia o cabeçalho e armazene-o em raiz
