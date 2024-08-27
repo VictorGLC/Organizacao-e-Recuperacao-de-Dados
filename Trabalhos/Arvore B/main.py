@@ -111,9 +111,23 @@ def lePagina(rrn):
 
         return pag
 
-def escrevePagina(rrn, pag):
 
-def divide(chave, filhoD, pag):
+'''def escrevePagina(rrn, pag):
+    with open("btree.dat", "rb+") as arq:
+        byte_offset = (rrn * TAM_REG) + TAM_CAB
+        arq.seek(byte_offset)
+        # Escreve o número de chaves
+        arq.write(struct.pack('i', pag.numChaves))
+        
+        # Escreve as chaves
+        for chave in pag.chaves:
+            arq.write(struct.pack('i', chave))
+        
+        # Escreve os filhos
+        for filho in pag.filhos:
+            arq.write(struct.pack('i', filho))'''
+
+# def divide(chave, filhoD, pag):
 
 def novo_rrn():
     with open("btree.dat", "r+b") as arq:
