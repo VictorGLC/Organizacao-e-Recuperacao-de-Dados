@@ -1,10 +1,11 @@
 import sys
 import struct
+import io
 import os
 
 ORDEM = 5
 TAM_CAB = 4
-TAM_PAG = (12*ORDEM)-4
+TAM_PAG = (12 * ORDEM)-4
 ARQ_DADOS = 'dados/games20.dat'
 
 class Pagina:
@@ -15,18 +16,18 @@ class Pagina:
         self.filhos: list = [-1] * (ORDEM)
 
 # funcoes auxiliares
-def escreveRaiz(raiz):
+def escreveRaiz(raiz: int) -> None:
     with open('btree.dat', 'r+b') as arq:
         arq.seek(0)
         arq.write(struct.pack('<i', raiz))
 
-def retornaRaiz():
+def retornaRaiz() -> int: 
     with open('btree.dat', 'r+b') as arq:
         arq.seek(0)
         raiz = struct.unpack('<i', arq.read(4))[0]
     return raiz
 
-def buscaNaArvore(chave, rrn):
+def buscaNaArvore(chave: int, rrn: int) -> tuple[bool, int, int]:
     if rrn == -1:  # Condição de parada de recursão
         return False, -1, -1
     else:
@@ -41,7 +42,7 @@ def buscaNaArvore(chave, rrn):
             # Busque na página filha
             return buscaNaArvore(chave, pag.filhos[pos])
 
-def buscaNaPagina(chave, pag):
+def buscaNaPagina(chave: int, pag: Pagina) -> tuple[bool, int]:
     pos = 0
 
     # Percorre as chaves na página até encontrar uma maior que a chave buscada ou até o final das chaves
@@ -54,7 +55,7 @@ def buscaNaPagina(chave, pag):
     else:
         return False, pos
 
-def insereNaArvore(chave, byteOffset, rrnAtual):
+def insereNaArvore(chave: int, byteOffset: int, rrnAtual: int) -> tuple[int, int, int, bool]:
     if rrnAtual == -1:  # Condição de parada da recursão
         chavePro = chave
         filhoDpro = -1
@@ -82,7 +83,7 @@ def insereNaArvore(chave, byteOffset, rrnAtual):
             escrevePagina(novoRrn(), novapag)
             return chavePro, byteOffsetPro, filhoDpro, True
 
-def insereNaPagina(chave, byteOffset, filhoD, pag):
+def insereNaPagina(chave: int, byteOffset: int, filhoD: int, pag: Pagina) -> None:
     if pag.numChaves == ORDEM - 1:
         pag.filhos.append(-1)
         pag.chaves.append(-1)
@@ -104,7 +105,7 @@ def insereNaPagina(chave, byteOffset, filhoD, pag):
     pag.numChaves += 1
   
 
-def lePagina(rrn):
+def lePagina(rrn: int) -> Pagina:
     # Calcula o byte-byteOffset da página a partir do RRN
     byteOffset = (rrn * TAM_PAG) + TAM_CAB
     # Move o ponteiro do arquivo para o byte-byteOffset calculado
@@ -131,7 +132,7 @@ def lePagina(rrn):
 
         return pag
 
-def escrevePagina(rrn, pag):
+def escrevePagina(rrn: int, pag: Pagina):
     with open("btree.dat", "r+b") as arq:
         byteOffset = (rrn * TAM_PAG) + TAM_CAB
         arq.seek(0)
@@ -139,7 +140,7 @@ def escrevePagina(rrn, pag):
         # Escreve o número de chaves
         arq.write(struct.pack(f'<i{ORDEM - 1}i{ORDEM-1}i{ORDEM}i', pag.numChaves, *pag.chaves, *pag.offsets, *pag.filhos))
 
-def divide(chave, byteOffset, filhoD, pag):
+def divide(chave: int, byteOffset: int, filhoD: int, pag: Pagina) -> tuple[int, int, Pagina, Pagina, int]:
     # Insira chave e filhoD em pag usando a função insereNaPagina
     insereNaPagina(chave, byteOffset, filhoD, pag)
     # Calcule a posição do meio
@@ -177,7 +178,7 @@ def divide(chave, byteOffset, filhoD, pag):
     return chavePro, filhoDpro, pAtual, pNova, byteOffsetPro
 
 
-def novoRrn():
+def novoRrn() -> int:
     with open("btree.dat", "r+b") as arq:
         arq.seek(0, os.SEEK_END)
         byteOffset = arq.tell()
@@ -185,10 +186,10 @@ def novoRrn():
         
     return rrn
 
-def gerenciadorDeInsercao(chave, offset):
+def gerenciadorDeInsercao(chave: int, offset: int) -> None:
     raiz = retornaRaiz()
     chavePro, byteOffsetPro, filhoDpro, promocao = insereNaArvore(chave, offset, raiz)
-    #imprimeArvore()
+
     if promocao:
         # Inicialize pNova como uma nova página
         pNova = Pagina()
@@ -205,7 +206,7 @@ def gerenciadorDeInsercao(chave, offset):
         escrevePagina(raiz, pNova)
         escreveRaiz(raiz)
     
-def criaIndice():
+def criaIndice() -> None:
 
     iniciaIndice()
     i = 0
@@ -217,7 +218,7 @@ def criaIndice():
 
     print('O indice btree.dat foi criado com sucesso!')
 
-def iniciaIndice():
+def iniciaIndice() -> None:
      with open('btree.dat', 'wb') as arq:
         raiz = 0
         arq.write(struct.pack('<i', raiz))
@@ -227,7 +228,7 @@ def iniciaIndice():
         arq.write(struct.pack(f'<{ORDEM -1}i', *pag.offsets))
         arq.write(struct.pack(f'<{ORDEM}i', *pag.filhos))
 
-def buscaChave(chave, arqDados):
+def buscaChave(chave: int, arqDados: io.BufferedIOBase) -> None:
     raiz = retornaRaiz()
     achou, rrn, pos = buscaNaArvore(chave, raiz)
     if achou:
@@ -244,7 +245,7 @@ def buscaChave(chave, arqDados):
         print(f'Busca pelo registro de chave "{chave}"')
         print("Erro: registro não encontrado!\n")
 
-def insereChave(registro, arqDados):
+def insereChave(registro: str, arqDados: io.BufferedIOBase) -> None:
     tamReg = len(registro)
     chave = int(registro.split("|")[0])
     raiz = retornaRaiz()
@@ -268,24 +269,24 @@ def insereChave(registro, arqDados):
         print(f'Inserção do registro de chave "{chave}"')
         print(registro + f' ({tamReg} bytes - offset {byteOffset})\n')        
 
-def executaOperacoes(arq, caminho_operacoes):
-    with open(caminho_operacoes, 'r') as arq_operacoes:
+def executaOperacoes(arqDados: io.BufferedIOBase, arquivo_operacoes: io.BufferedIOBase) -> None:
+    with open(arquivo_operacoes, 'r') as arq_operacoes:
         for linha in arq_operacoes:
             operacao = linha[0]
             conteudo = linha[1:].strip()
             chave = int(conteudo.split("|")[0])
 
             if operacao == 'i':
-                insereChave(conteudo, arq)
+                insereChave(conteudo, arqDados)
             elif operacao == 'b':
-                buscaChave(chave, arq)
+                buscaChave(chave, arqDados)
             else:
                 raise Exception('Operação inválida')
-            arq.seek(0)
+            arqDados.seek(0)
 
-    print(f'As operações do arquivo "{caminho_operacoes}" foram executadas com sucesso!')
+    print(f'As operações do arquivo "{arquivo_operacoes}" foram executadas com sucesso!')
 
-def lerTodasPaginas(arq):
+def lerTodasPaginas(arq: io.BufferedIOBase) -> list[Pagina]:
     paginas = []
     while True:
         # Ler uma página
@@ -311,7 +312,7 @@ def lerTodasPaginas(arq):
     
     return paginas
 
-def imprimeArvore():
+def imprimeArvore() -> None:
     with open('btree.dat', 'rb') as arq:
         raiz = struct.unpack('<i', arq.read(TAM_CAB))[0]
         paginas = lerTodasPaginas(arq)
@@ -345,7 +346,7 @@ def registrosDados() -> tuple[int, int]:
             byteOffset += tam + 2
     return pares
 
-def lerChave(indice):
+def lerChave(indice: int) -> tuple[int, int]:
     pares = registrosDados()
 
     if indice < len(pares):
@@ -370,8 +371,8 @@ def main(nargs: int, args: list[str]) -> None:
             if flag == '-c':
                 criaIndice()
             elif flag == '-e':
-                caminho_operacoes = args[2]
-                executaOperacoes(arqDados, caminho_operacoes)
+                arquivo_operacoes = args[2]
+                executaOperacoes(arqDados, arquivo_operacoes)
             elif flag == '-p':
                 imprimeArvore()
             else:
