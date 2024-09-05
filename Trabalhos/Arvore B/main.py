@@ -15,12 +15,14 @@ class Pagina:
         self.offsets: list = [-1] * (ORDEM - 1)
         self.filhos: list = [-1] * (ORDEM)
 
-# funcoes auxiliares
-def escreveRaiz(raiz: int) -> None:
+# Funções auxiliares
+# A função a seguir grava o valor da raiz na primeira posição do arquivo:
+def escreveRaiz(raiz: int) -> None:    
     with open('btree.dat', 'r+b') as arq:
         arq.seek(0)
         arq.write(struct.pack('<i', raiz))
 
+#Essa função lê e retorna a raiz armazenada no arquivo:
 def retornaRaiz() -> int: 
     with open('btree.dat', 'r+b') as arq:
         arq.seek(0)
@@ -55,6 +57,7 @@ def buscaNaPagina(chave: int, pag: Pagina) -> tuple[bool, int]:
     else:
         return False, pos
 
+# Realiza a inserção recursiva de uma chave na árvore
 def insereNaArvore(chave: int, byteOffset: int, rrnAtual: int) -> tuple[int, int, int, bool]:
     if rrnAtual == -1:  # Condição de parada da recursão
         chavePro = chave
@@ -73,17 +76,19 @@ def insereNaArvore(chave: int, byteOffset: int, rrnAtual: int) -> tuple[int, int
     if not promo:
         return -1, -1, -1, False
     else:
-        if pag.numChaves < ORDEM - 1:  # Existe espaço para inserir chavePro
+        if pag.numChaves < ORDEM - 1:  # Se existe espaço para inserir chavePro
             insereNaPagina(chavePro, byteOffset, filhoDpro, pag)
             escrevePagina(rrnAtual, pag)
             return -1, -1, -1, False
-        else:
+        else: # Se não, divide, promove chave e cria uma nova página
             chavePro, filhoDpro, pag, novapag, byteOffsetPro = divide(chavePro, byteOffset, filhoDpro, pag)
             escrevePagina(rrnAtual, pag)
             escrevePagina(novoRrn(), novapag)
             return chavePro, byteOffsetPro, filhoDpro, True
 
+# Função responsável pela inserção de novos dados na página e garantir que atualizem e estejam nas posições corretas
 def insereNaPagina(chave: int, byteOffset: int, filhoD: int, pag: Pagina) -> None:
+    # Verifica se a página está cheia e adiciona um expaço extra se estiver
     if pag.numChaves == ORDEM - 1:
         pag.filhos.append(-1)
         pag.chaves.append(-1)
@@ -103,7 +108,6 @@ def insereNaPagina(chave: int, byteOffset: int, filhoD: int, pag: Pagina) -> Non
     pag.filhos[i + 1] = filhoD
     # Atualiza o número de chaves na página
     pag.numChaves += 1
-  
 
 def lePagina(rrn: int) -> Pagina:
     # Calcula o byte-byteOffset da página a partir do RRN
@@ -115,6 +119,7 @@ def lePagina(rrn: int) -> Pagina:
         pag = Pagina()
         # Ler o número de chaves
         pag.numChaves = struct.unpack('<i', arq.read(4))[0]
+        # Cada repetição a seguir lê quatro bytes do arquivo por iteração, adicionando-os as respectivas listas
         pag.chaves = []
         for _ in range(ORDEM - 1):
             chave = struct.unpack('<i', arq.read(4))[0]
@@ -132,6 +137,7 @@ def lePagina(rrn: int) -> Pagina:
 
         return pag
 
+#Escreve os dados de uma página no arquivo em um RRN específico.
 def escrevePagina(rrn: int, pag: Pagina):
     with open("btree.dat", "r+b") as arq:
         byteOffset = (rrn * TAM_PAG) + TAM_CAB
@@ -177,7 +183,7 @@ def divide(chave: int, byteOffset: int, filhoD: int, pag: Pagina) -> tuple[int, 
     # Retorne a chave promovida, o RRN do filho direito, e as duas páginas
     return chavePro, filhoDpro, pAtual, pNova, byteOffsetPro
 
-
+# Calcula o próximo RRN disponível
 def novoRrn() -> int:
     with open("btree.dat", "r+b") as arq:
         arq.seek(0, os.SEEK_END)
@@ -186,6 +192,7 @@ def novoRrn() -> int:
         
     return rrn
 
+# Coordena o processo inserção, promove chaves e ajusta raiz quando necessário
 def gerenciadorDeInsercao(chave: int, offset: int) -> None:
     raiz = retornaRaiz()
     chavePro, byteOffsetPro, filhoDpro, promocao = insereNaArvore(chave, offset, raiz)
@@ -206,18 +213,19 @@ def gerenciadorDeInsercao(chave: int, offset: int) -> None:
         escrevePagina(raiz, pNova)
         escreveRaiz(raiz)
     
+# Inicializa o índice e insere cada chave lida do arquivo na árvore
 def criaIndice() -> None:
-
     iniciaIndice()
     i = 0
-    chave, byteOffset = lerChave(i)
-    while chave is not None:
+    chave, byteOffset = lerChave(i) 
+    while chave is not None: 
         i+=1
         gerenciadorDeInsercao(chave, byteOffset)
         chave, byteOffset = lerChave(i)
 
     print('O indice btree.dat foi criado com sucesso!')
 
+# Inicializa o arquivo de índice da árvore B
 def iniciaIndice() -> None:
      with open('btree.dat', 'wb') as arq:
         raiz = 0
@@ -228,10 +236,11 @@ def iniciaIndice() -> None:
         arq.write(struct.pack(f'<{ORDEM -1}i', *pag.offsets))
         arq.write(struct.pack(f'<{ORDEM}i', *pag.filhos))
 
+# Busca registro no arquivo de dados com base em um chave
 def buscaChave(chave: int, arqDados: io.BufferedIOBase) -> None:
     raiz = retornaRaiz()
     achou, rrn, pos = buscaNaArvore(chave, raiz)
-    if achou:
+    if achou: # Se chave for encontrada, procura o conteúdo do registro, tamanho e byteOffset e os imprime
         pag = lePagina(rrn)
         byteOffset = pag.offsets[pos]
         arqDados.seek(0)
@@ -245,15 +254,17 @@ def buscaChave(chave: int, arqDados: io.BufferedIOBase) -> None:
         print(f'Busca pelo registro de chave "{chave}"')
         print("Erro: registro não encontrado!\n")
 
+# Insere um registro no arquivo de dados e atualiza a árvore
 def insereChave(registro: str, arqDados: io.BufferedIOBase) -> None:
     tamReg = len(registro)
     chave = int(registro.split("|")[0])
     raiz = retornaRaiz()
+    # Verifica se a chave existe
     achou, _, _ = buscaNaArvore(chave, raiz)
-    if achou:
+    if achou: # Se existir:
         print(f'Inserção do registro de chave "{chave}"')
         print(f'Erro: chave "{chave}" já existente\n')
-    else:
+    else: # Se não, faz as escritas, inserções e atualizações necessárias
         arqDados.seek(0, 2)
         byteOffset = arqDados.tell()
         arqDados.write(struct.pack('<h', tamReg))
@@ -333,29 +344,32 @@ def imprimeArvore() -> None:
                 print(f'Filhos: {paginas[i].filhos}\n')
         print('O índice "btree.dat" foi impresso com sucesso!')
 
+# Lê os dados do arquivo e retorna uma lista de pares
 def registrosDados() -> tuple[int, int]:
     with open(ARQ_DADOS, 'rb') as arqDados:
         pares = []
         arqDados.seek(0)
+        # Lê o número total de registros a partir do cabeçalho
         num_registros = struct.unpack('<i', arqDados.read(TAM_CAB))[0]
         byteOffset = TAM_CAB
-        for i in range(num_registros):
-            tam = struct.unpack('<h', arqDados.read(2))[0]
-            chave = int(arqDados.read(tam).decode().split("|")[0])
-            pares.append((chave, byteOffset))
-            byteOffset += tam + 2
+        # Repetição para adicionar a chave e o byteOffset à lista pares, além de atualizar o byteOffset
+        for i in range(num_registros): 
+            tam = struct.unpack('<h', arqDados.read(2))[0]  
+            chave = int(arqDados.read(tam).decode().split("|")[0])  
+            pares.append((chave, byteOffset))   
+            byteOffset += tam + 2   
     return pares
 
+# Lê chave e seu byteOffset a partir de uma lista de pares
 def lerChave(indice: int) -> tuple[int, int]:
     pares = registrosDados()
 
-    if indice < len(pares):
+    if indice < len(pares): # Se o índice é válido, adquire a chave do índice e o byteOffset do par correspondente
         chave = pares[indice][0]
         byteOffset = pares[indice][1]
         return chave, byteOffset
     
     return None, None
-
 
 def main(nargs: int, args: list[str]) -> None:
     try:
